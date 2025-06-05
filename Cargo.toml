@@ -1,0 +1,14 @@
+[package]
+name = "qosmic_512"
+version = "0.2.3"
+edition = "2021"
+
+[dependencies]
+hex = "0.4"
+rand = "0.8"
+ndarray = "0.15"
+num-bigint = "0.4"
+num-traits = "0.2"
+lazy_static = "1.4.0"
+log = "0.4"
+env_logger = "0.10"
