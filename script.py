@@ -69,10 +69,6 @@ def run_hash_algorithm(message: str, algorithm: str, qosmic_process_instance=Non
         except Exception as e:
             print(f"Error communicating with Qosmic512 process in worker: {e}", file=sys.stderr)
             return None
-    elif algorithm == "sha256":
-        return hashlib.sha256(message_bytes).hexdigest()
-    elif algorithm == "sha512":
-        return hashlib.sha512(message_bytes).hexdigest()
     elif algorithm == "blake2b":
         return hashlib.blake2b(message_bytes).hexdigest()
     elif algorithm == "sha3_512":
