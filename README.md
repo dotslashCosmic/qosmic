@@ -10,8 +10,7 @@
 
 * **Command-Line Interface**: Hash strings or files directly from your terminal.
 
-* **Performance Note**: Currently significantly slower (~2000x) than typical hashing algorithms at ~2900 cycles/bit, vs ~1.5 cycles/bit for SHA3_512
-* Runs at ~40μs/hash per chunk of 64 bytes
+* **Performance Note**: Currently slightly slower (~2x) than typical hashing algorithms at ~4 cycles/bit, vs ~1.5 cycles/bit for SHA3_512
 
 * **Hashes**:
 * qosmic_512.exe qosmic_512 hash: `43df82a477c658edc47f8bbb1213e7df69e35ba5ed61039c340c79ff55cb45cc9d7c998d749a96d83f97f296de063a4cc2f812715c3f3cbb5f37189906bbfc96`
