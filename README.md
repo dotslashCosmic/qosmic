@@ -18,41 +18,61 @@
 
 ## Installation
 
-To build the `qosmic_512` executable, ensure you have Rust and Cargo/dependencies installed. Then, navigate to the project root directory and run:
+To build the `qosmic_512` executable, ensure you have Rust and Cargo dependencies installed. Then, navigate to the project root directory and run:
 
 `cargo build --release`
 
 This command compiles the project in release mode for optimized performance. The executable will be generated at `target/release/qosmic_512`.
 
 ## Usage
-
-You can hash data by providing either a string or a file as input. Optional logging flags are available for more detailed output.
+You can hash data by providing either a string or a file as input. Optional logging flags and a persistent key option are available for more detailed output and customizable hashing.
 
 ### Basic Syntax
-
-`cargo run --release [--debug|--info] (-f|-s) (file_path|string_input)`
+`cargo run --release [--debug|--info] (--interactive | (-f|-s) (file_path|string_input)) [--key <key_input>]`
 
 ### Arguments
+* `--interactive`: Run the application in interactive mode. In this mode, you can continuously input strings to be hashed. You can also set a persistent key by typing KEY <your_key_here>. Type EXIT or QUIT to end the session.
 
-* `-f <file_path>`: Hash the content of the specified file.
+* `-f <file_path>`: Hash the content of the specified file. (Only for non-interactive mode)
 
-* `-s <string_input>`: Hash the provided string. For multi-word strings, enclose the string in double quotes (e.g., `"Your text here"`).
+* `-s <string_input>`: Hash the provided string. For multi-word strings, enclose the string in double quotes (e.g., "Your text here"). (Only for non-interactive mode)
+
+* `--key <key_input>`: (Optional) Provide a user-defined key for hashing. This key will be mixed into the internal state for stronger customization. For multi-word keys, enclose the key in double quotes (e.g., "my secret key").
 
 * `--debug`: (Optional) Enable debug-level logging for verbose internal process output.
 
 * `--info`: (Optional) Enable info-level logging for general information during execution (e.g., S-Box generation time).
 
 ### Examples
-
 **Hashing a string:**
 
 `cargo run --release -- -s "password"`
 
-`qosmic_512 Hash: 690ac2095f55da52e999e3715d7c9604f9269887f2ed3f92625f6306f9ceab9e1237ddf0b755063f00e396459d949d6909da021184d2d83e58bdb1981b5f5a4a`
+`qosmic_512 Hash: 690ac209...`
 
-**Hashing a file with info logging(slower):**
+**Hashing a file with info logging (slower):**
 
 `cargo run --release -- --info -f path/to/data.bin`
+
+Running in interactive mode:
+
+`cargo run --release -- --interactive`
+
+`Enter text to hash (or 'KEY <your_key>' to set a key, 'EXIT'/'QUIT' to exit):
+hello world
+<qosmic_512 Hash: ...>
+KEY my_custom_key
+Key set for subsequent hashes.
+another input
+<qosmic_512 Hash: ...>
+EXIT
+Hashing a string with a key:`
+
+`cargo run --release -- -s "sensitive data" --key "my secret phrase"`
+
+
+
+
 
 **Performance Snapshot:**
 Hashes per second: 143,657.53 hashes/sec (based on 1,000,000 iterations on 16 CPU cores)
