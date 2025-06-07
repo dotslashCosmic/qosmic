@@ -13,7 +13,7 @@ BEGIN
             VALUE "FileDescription", "Qosmic-512 Hashing Utility\0"
             VALUE "FileVersion", "0.0.2.6\0"
             VALUE "InternalName", "qosmic_512.exe\0"
-            VALUE "LegalCopyright", "MIT 2025\0"
+            VALUE "LegalCopyright", "GNU GPLv3 2025\0"
             VALUE "OriginalFilename", "qosmic_512.exe\0"
             VALUE "ProductName", "Qosmic 512\0"
             VALUE "ProductVersion", "0.0.2.6\0"
