@@ -1,6 +1,6 @@
 [package]
 name = "qosmic_512"
-version = "0.2.3"
+version = "0.2.6"
 edition = "2021"
 
 [dependencies]
@@ -12,3 +12,6 @@ num-traits = "0.2"
 lazy_static = "1.4.0"
 log = "0.4"
 env_logger = "0.10"
+
+[build-dependencies]
+winres = "0.1"
