@@ -10,6 +10,10 @@
 
 * **Command-Line Interface**: Hash strings or files directly from your terminal.
 
+* **NIST Test Script**: Hashes qosmic_512 against several algorithms and compares them in comprehensive NIST approved tests.
+
+     - Must have qosmic_512 built, and Python =>3.11 with hashlib installed.
+
 * **Performance Note**: Currently slightly slower (~2x) than typical hashing algorithms at ~4 cycles/bit, vs ~1.5 cycles/bit for SHA3_512
 
 * **Hashes for qosmic_512.exe v0.2.7**:
