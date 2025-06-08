@@ -8,22 +8,19 @@ import numpy as np
 import hashlib
 import multiprocessing
 
-_qosmic_executable_path = "target/release/qosmic_512.exe" if sys.platform == "win32" else "qosmic_512"
+_qosmic_executable_path = "target/release/qosmic_512.exe" if sys.platform == "win32" else "target/release/qosmic_512"
 
 def _initialize_qosmic_process_for_worker(qosmic_executable_path: str):
-    """Initializes the Qosmic512 process in interactive mode for a single worker."""
     if not os.path.exists(qosmic_executable_path) and not any(os.path.exists(os.path.join(path, qosmic_executable_path)) for path in os.environ["PATH"].split(os.pathsep)):
         print(f"Error: '{qosmic_executable_path}' for Qosmic512 not found. Please ensure it's compiled and in the same directory or in your system's PATH.", file=sys.stderr)
         return None
-
     try:
         qosmic_process = subprocess.Popen(
             [qosmic_executable_path, "--interactive"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True, 
-            bufsize=1 
-        )
+            bufsize=1 )
         time.sleep(0.1) 
         return qosmic_process
     except Exception as e:
@@ -71,8 +68,16 @@ def run_hash_algorithm(message: str, algorithm: str, qosmic_process_instance=Non
             return None
     elif algorithm == "blake2b":
         return hashlib.blake2b(message_bytes).hexdigest()
+    elif algorithm == "blake2s":
+        return hashlib.blake2s(message_bytes).hexdigest()
     elif algorithm == "sha3_512":
         return hashlib.sha3_512(message_bytes).hexdigest()
+    elif algorithm == "sha256":
+        return hashlib.sha256(message_bytes).hexdigest()
+    elif algorithm == "sha512":
+        return hashlib.sha512(message_bytes).hexdigest()
+    elif algorithm == "shake_256":
+        return hashlib.shake_256(message_bytes).hexdigest(64)
     else:
         print(f"Error: Unknown hashing algorithm specified: {algorithm}", file=sys.stderr)
         return None
@@ -327,11 +332,9 @@ def longest_run_of_ones_test(collected_hash_data: list[dict]) -> tuple[str, int,
     details = (f"Longest 1s (overall): {overall_max_run_ones}, Longest 0s (overall): {overall_max_run_zeros}, "
                f"NIST Pass Range: [{nist_expected_min} - {nist_expected_max}], Total Bits N={n}")
     if hash_with_longest_ones_info:
-        details += (f"\n    Hash with longest 1s run ({hash_with_longest_ones_info['longest_run']}): "
-                    f"'{hash_with_longest_ones_info['message']}' -> {hash_with_longest_ones_info['hex_hash']}")
+        details += (f"")
     if hash_with_longest_zeros_info:
-        details += (f"\n    Hash with longest 0s run ({hash_with_longest_zeros_info['longest_run']}): "
-                    f"'{hash_with_longest_zeros_info['message']}' -> {hash_with_longest_zeros_info['hex_hash']}")
+        details += (f"")
     return grade, int(overall_perfection_percentage), details
 
 def poker_test(bit_string: str, m: int = 4) -> tuple[str, int, str]:
@@ -573,10 +576,9 @@ def hash_generation_worker(args):
     return worker_hash_data
 
 def simulate_hashing_and_test(base_message: str, num_iterations: int):
-    ALGORITHMS_TO_TEST = ["qosmic512", "sha3_512", "blake2b"]
+    ALGORITHMS_TO_TEST = ["qosmic512", "blake2b", "sha3_512", "sha256", "sha512", "blake2s", "shake_256"]
     print("Qosmic512 Hashing Tester and Standard Hash Algorithm Comparison")
     print(f"This script will test the following algorithms: {', '.join(ALGORITHMS_TO_TEST)}.")
-    print("This may take a while, and will periodically update with hash attempt results.\n")
     num_cores = multiprocessing.cpu_count()
     print(f"Detected {num_cores} CPU cores. Will use {num_cores} processes for hash generation.")
     for current_algo in ALGORITHMS_TO_TEST:
@@ -648,5 +650,5 @@ def simulate_hashing_and_test(base_message: str, num_iterations: int):
 
 if __name__ == "__main__":
     BASE_MESSAGE = "password"
-    NUM_ITERATIONS = 1000
+    NUM_ITERATIONS = 1_000_000
     simulate_hashing_and_test(BASE_MESSAGE, NUM_ITERATIONS)
