@@ -1,4 +1,5 @@
 // src/utils.rs
+use crate::constants::KEY;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use rand::Rng;
@@ -99,3 +100,15 @@ pub fn bits_vec_to_u16(bits: &[u8]) -> u16 {
     for (idx, &bit) in bits.iter().take(16).enumerate() {
         val |= (bit as u16) << (15 - idx);}
     val}
+
+pub fn key_as_u128() -> u128 {
+    let mut limbs = KEY.iter_u64_digits();
+    let lsb = limbs.next().unwrap_or(0);
+    let msb = limbs.next().unwrap_or(0);
+    ((msb as u128) << 64) | (lsb as u128)}
+
+pub fn key_as_u64() -> u64 {
+    KEY.iter_u64_digits().next().unwrap_or(0)}
+
+pub fn key_as_u32() -> u32 {
+    key_as_u64() as u32}
