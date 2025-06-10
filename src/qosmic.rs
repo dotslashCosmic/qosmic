@@ -99,8 +99,9 @@ pub fn qosmic512(
             arr[i] = transformed_nonce.wrapping_add(COEFFS[i]).wrapping_mul(RATIO).wrapping_add(i as u64) | 1;}
         arr};
     let padding_start_time = Instant::now();
-    let data_len = input_data_bytes.len();
-    let initial_pad_len = (split_len - (data_len % split_len)) % split_len;
+    let data_len_bytes = input_data_bytes.len();
+    let data_len_bits = (data_len_bytes as u64) * 8;
+    let initial_pad_len = (split_len - (data_len_bytes % split_len)) % split_len;
     let mut final_pad_len = initial_pad_len;
     if final_pad_len < 9 {
         final_pad_len += split_len;}
@@ -108,8 +109,8 @@ pub fn qosmic512(
     let num_zero_bytes = final_pad_len.saturating_sub(1 + 8);
     for _ in 0..num_zero_bytes {
         input_data_bytes.push(0u8);}
-    input_data_bytes.extend_from_slice(&(data_len as u64).to_be_bytes());
-    debug!("Appended original length ({} bytes). Final padded data length: {}", data_len, input_data_bytes.len());
+    input_data_bytes.extend_from_slice(&(data_len_bits as u64).to_be_bytes());
+    debug!("Appended original length ({} bits). Final padded data length: {} bytes", data_len_bits, input_data_bytes.len());
     debug!("Padding took: {:?}", padding_start_time.elapsed());
     let chunk_processing_start_time = Instant::now();
     let mut _chunk_idx = 0;
@@ -230,14 +231,17 @@ pub fn qosmic512(
     final_hash_state_bytes = final_compressed_bytes;
     debug!("  After post-permutation h_func compression (first 16): {:?}", &final_hash_state_bytes[..16]);
     let salt_gen_start = Instant::now();
-    let salt_seed = nonce ^ current_main_state[0] ^ current_main_state[7];
-    debug!("Salt seed for final derive: {}", salt_seed);
-    let salt_derived_val = derive_internal(salt_seed, &SBOX, &mut internal_seed);
-    debug!("Salt derived value: {}", salt_derived_val);
+    let salt_seed_1 = nonce ^ current_main_state[0] ^ current_main_state[7];
+    debug!("Salt seed 1 for final derive: {}", salt_seed_1);
+    let salt_derived_val_1 = derive_internal(salt_seed_1, &SBOX, &mut internal_seed);
+    debug!("Salt derived value 1: {}", salt_derived_val_1);
+    let salt_seed_2 = salt_derived_val_1 ^ current_main_state[1] ^ current_main_state[6] ^ (internal_seed as u64);
+    debug!("Salt seed 2 for final derive: {}", salt_seed_2);
+    let salt_derived_val_2 = derive_internal(salt_seed_2, &SBOX, &mut internal_seed);
+    debug!("Salt derived value 2: {}", salt_derived_val_2);
     let mut salt_bytes_padded = vec![0u8; 64];
-    let salt_bytes = salt_derived_val.to_be_bytes();
-    let start_copy_idx = 64 - salt_bytes.len();
-    salt_bytes_padded[start_copy_idx..].copy_from_slice(&salt_bytes);
+    salt_bytes_padded[0..8].copy_from_slice(&salt_derived_val_1.to_be_bytes());
+    salt_bytes_padded[8..16].copy_from_slice(&salt_derived_val_2.to_be_bytes());
     let salt_gen_duration = salt_gen_start.elapsed();
     debug!("Salt generation and padding took: {:?}", salt_gen_duration);
     debug!("Padded salt bytes (first 16): {:?}", &salt_bytes_padded[..16]);
