@@ -292,7 +292,7 @@ fn run_batch_mode(file_path: String, key: Option<Vec<u8>>, output_format: Option
                     encode::to_base58(&hash_result)},
                 "b64" => {
                     debug!("Encoding hash for line {} to Base64.", line_count);
-                    encode::to_base646(&hash_result)},
+                    encode::to_base64(&hash_result)},
                 "bin" => {
                     debug!("Encoding hash for line {} to Binary.", line_count);
                     encode::to_binary(&hash_result)},
