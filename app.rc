@@ -1,9 +1,14 @@
 // app.rc
+#define VER_FILE_VERSION 0,3,0,0
+#define VER_PRODUCT_VERSION 0,3,0,0
+#define VER_FILE_VERSION_STR "0.3.0\0"
+#define VER_PRODUCT_VERSION_STR "0.3.0\0"
+
 1 ICON "app.ico"
 
 1 VERSIONINFO
-FILEVERSION     0,0,2,7
-PRODUCTVERSION  0,0,2,7
+FILEVERSION      VER_FILE_VERSION
+PRODUCTVERSION   VER_PRODUCT_VERSION
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
@@ -11,12 +16,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "dotslashCosmic\0"
             VALUE "FileDescription", "Qosmic-512 Hashing Utility\0"
-            VALUE "FileVersion", "0.0.2.7\0"
+            VALUE "FileVersion", VER_FILE_VERSION_STR
             VALUE "InternalName", "qosmic_512.exe\0"
-            VALUE "LegalCopyright", "GNU GPLv3 2025\0"
+            VALUE "LegalCopyright", "GNU GPLv3, 2025\0"
             VALUE "OriginalFilename", "qosmic_512.exe\0"
             VALUE "ProductName", "Qosmic 512\0"
-            VALUE "ProductVersion", "0.0.2.7\0"
+            VALUE "ProductVersion", VER_PRODUCT_VERSION_STR
         END
     END
     BLOCK "VarFileInfo"
