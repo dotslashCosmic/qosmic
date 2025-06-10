@@ -16,10 +16,10 @@
 
 * **Performance Note**: Currently slightly slower (~2x) than typical hashing algorithms at ~4 cycles/bit, vs ~1.5 cycles/bit for SHA3_512
 
-* **Hashes for qosmic_512.exe v0.2.7**:
-* qosmic_512 hash: `89a606f899273fd292834146db78c90f285be14af5d4de77dcc1f2962216f27ef4bba6ff02218b6f4d2e6d7194fe5d6ba627a428ab2d5c8bd8e5be36700a195e`
-* sha3_512 hash: `0ddba35e024b7648e6129caa6889829cc752dd5fd7b48bc881d6f0509bcdf5d507110c8e4b4f0df01b62dad086a531e5c871b2ed37fe8ed8c834f63df1291e17`
-* sha_256 hash: `7d3747399daa7d3c2380b173450b47efb1a7a976d54b1ca76332074d72388f29`
+* **Hashes for qosmic_512.exe v0.3.0**:
+* qosmic_512 hash: `5c68cfecfdb76b35590e7244e7b49c484f2abba43290bc1765e30f61337c96ce87ecf64e4b2401be5a2725eb1e2e72bb71c659e5d92871f00ce0f9910b0a209c`
+* sha3_512 hash: `e26de0a4f38441868482c89b3b40224a43d4de0b0c154a682eb104cafb317a02856ddfdfb96abcb448cec2fb1b36240ff0df5dc6ea7a5baf9ea3bee94a47035c`
+* sha_256 hash: `9cd5e8b6cbf8302ca3071954bb484f6614cb7db8db3384695c266c2ea1389125`
 
 ## Installation
 
@@ -48,6 +48,12 @@ You can hash data by providing either a string or a file as input. Optional logg
 
 * `--info`: (Optional) Enable info-level logging for general information during execution (e.g., S-Box generation time).
 
+* `--batch-file <file_path>`: Process lines from the specified file. Each line in the file will be treated as a separate input string to be hashed, and the corresponding hash will be printed to standard output. This mode is optimized for performance in batch processing.
+
+* `--version`: Display version information and exit.
+
+* `--help`: Display this help message and exit.
+
 ### Examples
 **Hashing a string:**
 
@@ -59,23 +65,17 @@ You can hash data by providing either a string or a file as input. Optional logg
 
 `cargo run --release -- --info -f path/to/data.bin`
 
-Running in interactive mode:
+**Running in interactive mode:**
 
 `cargo run --release -- --interactive`
 
-`Enter text to hash (or 'KEY <your_key>' to set a key, 'EXIT'/'QUIT' to exit):
-hello world
-<qosmic_512 Hash: ...>
-KEY my_custom_key
-Key set for subsequent hashes.
-another input
-<qosmic_512 Hash: ...>
-EXIT
-Hashing a string with a key:`
+**Running in batch mode:**
+
+`qosmic_512 --batch-file nonce_list.txt -o hex`
+
+**Normal string hash:**
 
 `cargo run --release -- -s "sensitive data" --key "my secret phrase"`
-
-
 
 
 
