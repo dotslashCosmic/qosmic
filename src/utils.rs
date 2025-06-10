@@ -1,5 +1,5 @@
 // src/utils.rs
-use crate::constants::KEY;
+use crate::constants::QONST;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use rand::Rng;
@@ -101,14 +101,24 @@ pub fn bits_vec_to_u16(bits: &[u8]) -> u16 {
         val |= (bit as u16) << (15 - idx);}
     val}
 
+pub fn key_as_u512() -> [u128; 4] {
+    let mut limbs = QONST.iter_u64_digits();
+    let mut u64_limbs: [u64; 8] = [0; 8];
+    for i in 0..8 {
+        u64_limbs[i] = limbs.next().unwrap_or(0);}
+    [((u64_limbs[1] as u128) << 64) | (u64_limbs[0] as u128),
+     ((u64_limbs[3] as u128) << 64) | (u64_limbs[2] as u128),
+     ((u64_limbs[5] as u128) << 64) | (u64_limbs[4] as u128),
+     ((u64_limbs[7] as u128) << 64) | (u64_limbs[6] as u128),]}
+
 pub fn key_as_u128() -> u128 {
-    let mut limbs = KEY.iter_u64_digits();
+    let mut limbs = QONST.iter_u64_digits();
     let lsb = limbs.next().unwrap_or(0);
     let msb = limbs.next().unwrap_or(0);
     ((msb as u128) << 64) | (lsb as u128)}
 
 pub fn key_as_u64() -> u64 {
-    KEY.iter_u64_digits().next().unwrap_or(0)}
+    QONST.iter_u64_digits().next().unwrap_or(0)}
 
 pub fn key_as_u32() -> u32 {
     key_as_u64() as u32}
