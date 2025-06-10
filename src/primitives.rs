@@ -6,8 +6,7 @@ use ndarray::{Array1, Array2, Axis};
 use num_traits::ToBytes;
 use rand::Rng;
 use std::convert::TryInto;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use log::debug;
 
 const POLY_GF2_9_DEG9: u16 = 0x211;
 
@@ -18,13 +17,16 @@ pub fn encrypt_internal(message_bits: &Array1<u8>) -> (Array2<u64>, Array1<u64>)
     for _ in 0..(DIM * num_bits) {
         a_flat.push(rng.gen_range(0..Q_MOD));}
     let a_list = Array2::from_shape_vec((num_bits, DIM), a_flat).expect("Failed to reshape a_list for LWE matrix A");
+    debug!("encrypt_internal: Generated A_list matrix (first 3 rows): {:?}", a_list.rows().into_iter().take(3).collect::<Vec<_>>());
     let mut errors_vec = Vec::with_capacity(num_bits);
     for _ in 0..num_bits {
         errors_vec.push(rng.gen_range(-MAGNITUDE..(MAGNITUDE + 1)));}
     let errors = Array1::from_vec(errors_vec);
+    debug!("encrypt_internal: Generated errors vector (first 10 elements): {:?}", &errors.as_slice().unwrap()[..std::cmp::min(errors.len(), 10)]);
     let a_sq = a_list.mapv(|x| (x as u128 * x as u128 % Q_MOD as u128) as u64);
     let sum_a_sq: Array1<u64> = a_sq.sum_axis(Axis(1));
     let message_bits_u64 = message_bits.mapv(|x| x as u64);
+    debug!("encrypt_internal: Message bits converted to u64: {:?}", &message_bits_u64.as_slice().unwrap()[..std::cmp::min(message_bits_u64.len(), 10)]);
     let term3_message_encoding = message_bits_u64.mapv(|bit| (Q_MOD / 2) * bit);
     let b_ciphertext = sum_a_sq
         .iter()
@@ -81,9 +83,18 @@ pub fn generate_sbox_internal() -> SBoxType {
         if i == 0 {
             inverses[i] = 0;
         } else {
-            inverses[i] = gf2_9_pow(i as u16, (1 << 9) - 2, POLY_GF2_9_DEG9);}}
+            let base_exp: u16 = (1 << 9) - 2;
+            let key_val_u16 = (key_as_u128() >> (i % 113) as u32) as u16;
+            let modifier = (i as u16)
+                .wrapping_mul(key_val_u16)
+                .rotate_left(((key_val_u16 % 9) as u32).max(1))
+                .wrapping_add((MAGIC % 0x10000) as u16)
+                .wrapping_sub((RATIO % 0x10000) as u16);
+            let modified_exp = (base_exp ^ modifier) % ((1 << 9) - 1);
+            let final_exp = if modified_exp == 0 { 1 } else { modified_exp };
+            inverses[i] = gf2_9_pow(i as u16, final_exp, POLY_GF2_9_DEG9);}}
     let mut sbox = vec![0u16; 512];
-    let key_bytes = KEY.to_be_bytes();
+    let key_bytes = QONST.to_be_bytes();
     let c_val_from_key = u16::from_be_bytes(key_bytes[0..2].try_into().unwrap_or([0, 0]))
         .wrapping_add(u16::from_be_bytes(key_bytes[8..10].try_into().unwrap_or([0, 0])))
         .rotate_left((key_bytes[15] % 9) as u32)
@@ -111,6 +122,7 @@ pub fn gf2_9_mul(mut a: u16, mut b: u16, poly: u16) -> u16 {
     let nine_bit_mask: u16 = 0x1FF;
     a &= nine_bit_mask;
     b &= nine_bit_mask;
+	debug!("gf2_9_mul: a={:x}, b={:x}, poly={:x}", a, b, poly);
     for _ in 0..9 {
         if (b & 1) != 0 {
             res ^= a;}
@@ -119,68 +131,67 @@ pub fn gf2_9_mul(mut a: u16, mut b: u16, poly: u16) -> u16 {
         if msb_a_set {
             a ^= poly;}
         b >>= 1;}
+    debug!("gf2_9_mul: output={:x}", res);
     res & nine_bit_mask}
 
 pub fn gf2_9_pow(mut base: u16, mut exp: u16, poly: u16) -> u16 {
     let mut res: u16 = 1;
     let nine_bit_mask: u16 = 0x1FF;
     base &= nine_bit_mask;
+    debug!("gf2_9_pow: base={:x}, exp={:x}, poly={:x}", base, exp, poly);
     if base == 0 {
         return if exp == 0 { 1 } else { 0 };}
     while exp > 0 {
         if (exp & 1) != 0 {
-            res = gf2_9_mul(res, base, poly);}
+            res = gf2_9_mul(res, base, poly);
+            debug!("gf2_9_pow: exp is odd, res={:x}", res);}
         base = gf2_9_mul(base, base, poly);
+        debug!("gf2_9_pow: base (squared)={:x}", base);
         exp >>= 1;}
+    debug!("gf2_9_pow: output={:x}", res);
     res & nine_bit_mask}
 
 #[target_feature(enable = "sse2")]
-pub fn arx_internal(data_bytes: &[u8], key_val: u128, magic_val: u64, ratio_val: u64, arx_bits_val: &[u32]) -> Vec<u64> {
-    let pad_len = (8 - (data_bytes.len() % 8)) % 8;
-    let mut padded_bytes = data_bytes.to_vec();
-    for _ in 0..pad_len {
-        padded_bytes.push(pad_len as u8);}
-    let mut blocks: Vec<u64> = Vec::with_capacity(padded_bytes.len() / 8);
-    #[cfg(target_arch = "x86_64")]
-    unsafe {
-        for chunk in padded_bytes.chunks_exact(16) {
-            let block_pair = _mm_loadu_si128(chunk.as_ptr() as *const __m128i);
-            blocks.push(_mm_cvtsi128_si64(block_pair) as u64);
-            blocks.push(_mm_cvtsi128_si64(_mm_srli_si128(block_pair, 8)) as u64);}}
-    for chunk in padded_bytes[blocks.len() * 8..].chunks_exact(8) {
-        blocks.push(u64::from_be_bytes(chunk.try_into().unwrap()));}
-    let rounds = arx_bits_val.len() * 8;
-    let round_keys: Vec<u64> = (0..rounds)
-        .map(|r| {
-            let key_low_64 = (key_val & MASK_64 as u128) as u64;
-            let key_high_64 = ((key_val >> 64) & MASK_64 as u128) as u64;
-            let term1 = key_low_64.wrapping_add(magic_val.rotate_left((r % 64) as u32)).wrapping_add(ratio_val.rotate_right((r % 64) as u32));
-            let term2 = key_high_64 ^ ratio_val.wrapping_sub(magic_val).rotate_left((r % 64) as u32);
-            (term1 ^ term2).wrapping_mul((r as u64).wrapping_add(1).wrapping_mul(CONST))})
-        .collect();
-    for r_idx in 0..rounds {
-        let rot_amount = arx_bits_val[r_idx % arx_bits_val.len()];
-        let round_key_i = round_keys[r_idx];
-        let effective_rot = rot_amount % 64;
-        for block_val in blocks.iter_mut() {
-            let rotated_val_a = block_val.rotate_left(effective_rot);
-            let rotated_val_b = block_val.rotate_right(effective_rot.wrapping_add((MAGIC % 63) as u32));
-            *block_val = block_val.wrapping_add(rotated_val_a) ^ rotated_val_b ^ round_key_i;
-            *block_val = block_val.wrapping_mul(RATIO).wrapping_add(MAGIC ^ (round_key_i.rotate_left(r_idx as u32 % 64)));}
-        let key_high_64_transformed = ((key_val >> 64) & MASK_64 as u128) as u64;
-        let inner_round_key = key_high_64_transformed.rotate_left(((r_idx % 8) * 7) as u32).wrapping_add(CONST);
-        for block_val in blocks.iter_mut() {
-            let mut current_block_processing = *block_val;
-            current_block_processing ^= inner_round_key;
-            current_block_processing = current_block_processing.rotate_left((effective_rot.wrapping_add(r_idx as u32 * 5)) % 64);
-            *block_val = current_block_processing.wrapping_add(MAGIC ^ RATIO);}}
-    blocks}
+pub fn arx_internal(
+    data_bytes: &[u8],
+    constant_128: u128,
+    magic_val: u64,
+    ratio_val: u64,
+    arx_bits: &[u32; 8],
+) -> Vec<u64> {
+    debug!("arx_internal: data_bytes_len={}, constant_128={:x}", data_bytes.len(), constant_128);
+    let chunk_size = 8;
+    let pad_len = (chunk_size - (data_bytes.len() % chunk_size)) % chunk_size;
+    let mut padded_data = data_bytes.to_vec();
+    padded_data.extend_from_slice(&vec![0; pad_len]);
+    let mut output: Vec<u64> = Vec::with_capacity(padded_data.len() / chunk_size);
+    let mut state_high = (constant_128 >> 64) as u64;
+    let mut state_low = constant_128 as u64;
+    for chunk in padded_data.chunks_exact(chunk_size) {
+        let block = u64::from_be_bytes(chunk.try_into().unwrap());
+        debug!("  arx_internal: processing chunk={:x}", block);
+        state_low ^= block;
+        for i in 0..12 {
+            let rot1 = arx_bits[i % 8];
+            let rot2 = arx_bits[(i + 1) % 8];
+            state_low = state_low.wrapping_add(state_high);
+            state_high = (state_high ^ state_low).rotate_left(rot1);
+            state_low = state_low.wrapping_add(state_low.rotate_left(rot2));
+            state_high ^= state_high.rotate_right(rot1);
+            state_low = state_low.wrapping_mul(magic_val);
+            state_high = state_high.wrapping_add(ratio_val.rotate_left((i as u32) * 5));
+            state_high = state_high.wrapping_add(state_low);
+            state_low = (state_low ^ state_high).rotate_left(rot2);
+            debug!("  arx_internal: updated state={:x}", state_low);}
+        output.push(state_low);}
+    debug!("arx_internal: output_len={}, first_val={:x}", output.len(), output.get(0).unwrap_or(&0));
+    output}
 
 #[inline]
 pub fn derive_internal(seed: u64, s_box: &SBoxType, internal_seed_param: &mut u128) -> u64 {
     let mut l: u64 = (seed >> 32) & MASK_32;
     let mut r: u64 = seed & MASK_32;
-    for round_num in 0..64 {
+    for round_num in 0..32 {
         let rk_sbox_idx = ((r >> (32 - 9)) & 0x1FF) as usize;
         let sbox_output_for_rk = s_box[rk_sbox_idx % 512];
         let rk_term_sbox = (sbox_output_for_rk as u64).wrapping_mul(CONST);
@@ -189,7 +200,7 @@ pub fn derive_internal(seed: u64, s_box: &SBoxType, internal_seed_param: &mut u1
         let rk_final = rk & MASK_32;
         let mut f_val = r.wrapping_add(rk_final).rotate_left((round_num as u32 * 3) % 32);
         f_val &= MASK_32;
-        let f_sbox_idx = ((f_val >> (32 - 9)) & 0x1FF) as usize;
+        let f_sbox_idx = ((f_val >> 23) & 0x1FF) as usize;
         let sbox_output_for_f = s_box[f_sbox_idx % 512];
         f_val ^= (sbox_output_for_f as u64).wrapping_add(MAGIC);
         f_val &= MASK_32;
