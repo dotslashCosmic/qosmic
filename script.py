@@ -632,7 +632,7 @@ def simulate_hashing_and_test(base_message: str, num_iterations: int):
             ("Serial Test (Overlapping Bit Patterns)", serial_test, [all_bits, 3]),
             ("Block Frequency Test", block_frequency_test, [all_bits, 64]),
             ("Cumulative Sums Test", cumulative_sums_test, [all_bits]),
-            ("Discrete Fourier Transform (Spectral) Test)", spectral_test, [all_bits])]
+            ("Discrete Fourier Transform (Spectral) Test", spectral_test, [all_bits])]
         for test_name, func, args_list in test_funcs_params:
             print(f"\n{test_name}")
             try:
