@@ -1,6 +1,6 @@
 // src/primitives.rs
 use crate::constants::*;
-use crate::qosmic::SBoxType;
+use crate::core::SBoxType;
 use crate::utils::{key_as_u128, key_as_u64};
 use ndarray::{Array1, Array2, Axis};
 use num_traits::ToBytes;
