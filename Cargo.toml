@@ -1,9 +1,9 @@
 [package]
-name = "qosmic_512"
-version = "0.3.0"
-edition = "2021"
+name = "qosmic"
+version = "0.4.0"
+edition = "2024"
 authors = ["dotslashCosmic"]
-description = "Qosmic-512 Hashing Utility"
+description = "Qosmic Cryptographic Toolkit"
 copyright = "GNU GPLv3, 2025"
 
 [dependencies]
