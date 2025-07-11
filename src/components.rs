@@ -1,6 +1,6 @@
 // src/components.rs
 use crate::constants::*;
-use crate::qosmic;
+use crate::core;
 use crate::utils::{self, key_as_u512, key_as_u128, key_as_u32, key_as_u64};
 use log::debug;
 
@@ -131,11 +131,11 @@ pub fn h_func_internal(
     debug!("h_func_internal: d_after_init_transform={:x}", d);
     for i in 0..4 {
         debug!("h_func_internal: round={} loop_start a={:x}, b={:x}, c={:x}, d={:x}", i, a, b, c, d);
-        a = qosmic::v_func(a, nonce.wrapping_add(i as u64), p_array);
+        a = core::v_func(a, nonce.wrapping_add(i as u64), p_array);
         debug!("h_func_internal: round={} a_after_v_func={:x}", i, a);
-        b = qosmic::w_func(b, a.wrapping_add(i as u64), internal_seed);
+        b = core::w_func(b, a.wrapping_add(i as u64), internal_seed);
         debug!("h_func_internal: round={} b_after_w_func={:x}", i, b);
-        c = qosmic::d_func(c, b.wrapping_add(i as u64), a.wrapping_add(i as u64), internal_seed, main_state_arr);
+        c = core::d_func(c, b.wrapping_add(i as u64), a.wrapping_add(i as u64), internal_seed, main_state_arr);
         debug!("h_func_internal: round={} c_after_d_func={:x}", i, c);
         d = d.wrapping_add(c).rotate_left(ARX_BITS[i % 8].wrapping_add(nonce as u32));
         debug!("h_func_internal: round={} d_after_add_c_rot={:x}", i, d);
