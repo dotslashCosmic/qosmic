@@ -1,7 +1,6 @@
 // src/main.rs
-use qosmic_512::{get_sbox, qosmic512};
-use qosmic_512::utils::derive_deterministic_nonce;
-use qosmic_512::encode;
+use qosmic::{encode, get_sbox, hash_password, hmac_qosmic, qosmic_unkeyed};
+use qosmic::utils::derive_deterministic_nonce;
 use std::io::BufRead;
 use log::{LevelFilter, debug, info, error};
 use env_logger::{Builder, Target};
@@ -30,19 +29,24 @@ fn main() {
             Ok(file) => {
                 let writer = Box::new(BufWriter::new(file));
                 logger_builder.target(Target::Pipe(writer));
-                eprintln!("Debug logs (and higher) will be written to {}.", log_file_path);
-            },
+                eprintln!("Debug logs (and higher) will be written to {}.", log_file_path);},
             Err(e) => {
                 eprintln!("Warning: Could not create log file '{}': {}. Debug logs will go to stderr instead.", log_file_path, e);
                 logger_builder.target(Target::Stderr);}}
     } else {
         logger_builder.target(Target::Stderr);}
-    logger_builder
-        .filter_level(log_level)
-        .init();
+    logger_builder.filter_level(log_level).init();
     debug!("Application started with arguments: {:?}", args);
-    if log_level == LevelFilter::Info {
-        info!("Info logging enabled.");}
+    if let Some(pos) = args.iter().position(|r| r == "--password") {
+        if pos + 1 < args.len() {
+            let password = args[pos + 1].clone();
+            info!("Running in password hashing mode.");
+            run_password_mode(password.as_bytes());
+            process::exit(0);
+        } else {
+            error!("Error: Missing password after --password flag.");
+            print_usage_cli();
+            process::exit(1);}}
     let mut key: Option<Vec<u8>> = None;
     if let Some(pos) = args.iter().position(|r| r == "--key") {
         if pos + 1 < args.len() {
@@ -59,17 +63,17 @@ fn main() {
         if pos + 1 < args.len() {
             let format_arg = args[pos + 1].clone();
             match format_arg.as_str() {
-                "b36" | "bin" | "hex" => {
+                "b36" | "b58" | "b64" | "bin" | "hex" => {
                     output_format = Some(format_arg.clone());
                     debug!("Output format set to: {}", format_arg);},
                 _ => {
-                    error!("Error: Invalid output format '{}'. Use -o b36, -o bin, or -o hex.", format_arg);
+                    error!("Error: Invalid output format '{}'. Use -o b36, -o b58, -o b64, -o bin, or -o hex.", format_arg);
                     print_usage_cli();
                     process::exit(1);}}
             args.remove(pos + 1);
             args.remove(pos);
         } else {
-            error!("Error: Missing output format after -o flag. Use -o b36, -o bin, or -o hex.");
+            error!("Error: Missing output format after -o flag. Use -o b36, -o b58, -o b64, -o bin, or -o hex.");
             print_usage_cli();
             process::exit(1);}}
     let mut batch_file_path: Option<String> = None;
@@ -100,35 +104,40 @@ fn main() {
 
 fn print_help() {
     println!("{}\n", env!("CARGO_PKG_DESCRIPTION"));
-    println!("Usage: qosmic_512 [OPTIONS] <INPUT_MODE> <INPUT_VALUE>\n");
-    println!("Calculate the qosmic512 hash of a string or file.\n");
+    println!("Usage: qosmic [OPTIONS] <INPUT_MODE> <INPUT_VALUE>\n");
     println!("Input Modes:");
     println!("  -f <file>      Specify a file path as input.");
-    println!("  -s <string>    Specify a string literal as input.\n");
+    println!("  -s <string>    Specify a string literal as input.");
+    println!("  --password <password> Run in password hashing (KDF) mode.\n");
     println!("Options:");
+    println!("  -o <format>    Specify output format: 'b36' (Base36), 'b58' (Base58), 'b64' (Base64), 'bin' (Binary), 'hex' (Hex, default)");
     println!("  --help         Display this help message and exit.");
     println!("  --version      Display version information and exit.");
     println!("  --debug        Enable debug logging (writes to qosmic_debug.txt or stderr).");
     println!("  --info         Enable info logging (writes to stderr).");
-    println!("  -o <format>    Specify output format: 'b36' (Base36), 'b58' (Base58), 'b64' (Base64), 'bin' (Binary), 'hex' (Hex, default)");
-    println!("  --key <key>    Specify a user-defined key for hashing. For multi-word input, enclose in double quotes.");
+    println!("  --key <key>    Specify a user-defined key. When present, HMAC-qosmic is used. For multi-word input, enclose in double quotes.");
     println!("  --interactive  Run in interactive mode, processing input line by line from stdin.");
     println!("  --batch-file <file> Process lines from a file as input, outputting hashes one per line for max performance.\n");
     println!("Examples:");
-    println!("  qosmic_512 -s \"Hello World\" -o b36");
-    println!("  qosmic_512 -f my_document.txt --key \"mysecretkey\" --debug");
-    println!("  qosmic_512 --interactive -o bin");
-    println!("  qosmic_512 --batch-file nonce_list.txt -o hex\n");
-    println!("Note: For multi-word string/key input, enclose the value in double quotes.");}
+    println!("  qosmic -s \"Hello World\" -o b36");
+    println!("  qosmic --password \"yourPassword123\"");
+    println!("  qosmic -f my_document.txt --key \"my secret key\" --debug");
+    println!("  qosmic --interactive -o bin");
+    println!("  qosmic --batch-file nonce_list.txt -o hex\n");}
 
 fn print_usage_cli() {
-    println!("Usage: qosmic_512 [--debug|--info] (-f <file> | -s <string> | --interactive | --batch-file <file>) [-o b36|bin|hex] [--key <key>] [--version|--help]");
-    println!("For detailed help, run: qosmic_512 --help");}
+    println!("Usage: qosmic [--debug|--info] (-f <file> | -s <string> | --password <password> | --interactive | --batch-file <file>) [-o b36|b58|b64|bin|hex] [--key <key>] [--version|--help]");
+    println!("For detailed help, run: qosmic --help");}
+
+fn run_password_mode(password: &[u8]) {
+    info!("Calculating password hash with 10,000 iterations...");
+    let hash_result = hash_password(password);
+    info!("Password hash calculation complete.");
+    println!("{}", hash_result);
+    debug!("Password hash output (salt$hash) printed to stdout.");}
 
 fn run_cli_mode(args: Vec<String>, pre_set_key: Option<Vec<u8>>, output_format: Option<String>) {
     debug!("run_cli_mode: Arguments (filtered): {:?}", args);
-    let s_box = get_sbox();
-    let key_bytes: Option<&[u8]> = pre_set_key.as_deref();
     let filtered_args: Vec<String> = args.into_iter()
         .filter(|arg| !arg.starts_with("--") && !arg.starts_with("-o"))
         .collect();
@@ -151,11 +160,9 @@ fn run_cli_mode(args: Vec<String>, pre_set_key: Option<Vec<u8>>, output_format: 
                 let mut buffer = Vec::new();
                 if let Err(e) = file.read_to_end(&mut buffer) {
                     error!("Failed to read file: {}", e);
-                    process::exit(1);
-                }
+                    process::exit(1);}
                 debug!("Successfully read {} bytes from file.", buffer.len());
-                (buffer, 'f')
-            },
+                (buffer, 'f')},
             Err(e) => {
                 error!("Failed to open file '{}': {}", input_arg, e);
                 process::exit(1);}}
@@ -163,10 +170,14 @@ fn run_cli_mode(args: Vec<String>, pre_set_key: Option<Vec<u8>>, output_format: 
         info!("Using string input: '{}'", input_arg);
         debug!("String input as bytes: {:?}", input_arg.as_bytes());
         (input_arg.as_bytes().to_vec(), 's')};
-    let nonce = derive_deterministic_nonce(&input_data);
-    debug!("Derived deterministic nonce: {}", nonce);
-    info!("Calculating qosmic512 hash...");
-    let hash_result = qosmic512(input_data.to_vec(), 's', s_box, nonce, key_bytes);
+    let hash_result = if let Some(key_bytes) = pre_set_key {
+        info!("Calculating HMAC-qosmic hash with provided key...");
+        hmac_qosmic(&key_bytes, &input_data)
+    } else {
+        info!("Calculating qosmic (unkeyed) hash...");
+        let s_box = get_sbox();
+        let nonce = derive_deterministic_nonce(&input_data);
+        qosmic_unkeyed(input_data.to_vec(), 's', s_box, nonce)};
     info!("Hash calculation complete.");
     let final_output = if let Some(format) = output_format {
         match format.as_str() {
@@ -194,11 +205,9 @@ fn run_cli_mode(args: Vec<String>, pre_set_key: Option<Vec<u8>>, output_format: 
 
 fn run_interactive_mode(key: Option<Vec<u8>>, initial_output_format: Option<String>) {
     info!("Interactive mode active. Type input and press Enter. Press Ctrl+D (Unix) or Ctrl+Z then Enter (Windows) to exit.");
-    let s_box = get_sbox();
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut buffer = String::new();
-    let key_slice = key.as_deref();
     let output_format = initial_output_format;
     loop {
         debug!("Waiting for input in interactive mode...");
@@ -218,9 +227,15 @@ fn run_interactive_mode(key: Option<Vec<u8>>, initial_output_format: Option<Stri
                     continue;}
                 let input_bytes = input.as_bytes();
                 debug!("Input bytes for hashing: {:?}", input_bytes);
-                let nonce = derive_deterministic_nonce(input_bytes);
-                debug!("Derived nonce for interactive input: {}", nonce);
-                let hash_result = qosmic512(input_bytes.to_vec(), 's', s_box, nonce, key_slice);
+
+                let hash_result = if let Some(ref key_bytes) = key {
+                    debug!("Calculating HMAC-qosmic for interactive input...");
+                    hmac_qosmic(key_bytes, input_bytes)
+                } else {
+                    debug!("Calculating qosmic (unkeyed) for interactive input...");
+                    let s_box = get_sbox();
+                    let nonce = derive_deterministic_nonce(input_bytes);
+                    qosmic_unkeyed(input_bytes.to_vec(), 's', s_box, nonce)};
                 debug!("Hash result (hex): {}", hash_result);
                 let final_output = if let Some(format) = &output_format {
                     match format.as_str() {
@@ -256,8 +271,6 @@ fn run_interactive_mode(key: Option<Vec<u8>>, initial_output_format: Option<Stri
 
 fn run_batch_mode(file_path: String, key: Option<Vec<u8>>, output_format: Option<String>) {
     info!("Batch mode active. Processing file: {}", file_path);
-    let s_box = get_sbox();
-    let key_slice = key.as_deref();
     let file = match File::open(&file_path) {
         Ok(f) => f,
         Err(e) => {
@@ -278,9 +291,14 @@ fn run_batch_mode(file_path: String, key: Option<Vec<u8>>, output_format: Option
             continue;}
         let input_bytes = input.as_bytes();
         debug!("Processing line {}: '{}' (bytes: {:?})", line_count, input, input_bytes);
-        let nonce = derive_deterministic_nonce(input_bytes);
-        debug!("Derived nonce for line {}: {}", line_count, nonce);
-        let hash_result = qosmic512(input_bytes.to_vec(), 's', s_box, nonce, key_slice);
+        let hash_result = if let Some(ref key_bytes) = key {
+            debug!("Calculating HMAC-qosmic for line {}...", line_count);
+            hmac_qosmic(key_bytes, input_bytes)
+        } else {
+            debug!("Calculating qosmic (unkeyed) for line {}...", line_count);
+            let s_box = get_sbox();
+            let nonce = derive_deterministic_nonce(input_bytes);
+            qosmic_unkeyed(input_bytes.to_vec(), 's', s_box, nonce)};
         debug!("Hash result for line {} (hex): {}", line_count, hash_result);
         let final_output = if let Some(format) = &output_format {
             match format.as_str() {
