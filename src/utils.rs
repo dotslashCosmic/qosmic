@@ -3,6 +3,7 @@ use crate::constants::QONST;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use rand::Rng;
+use rand::RngCore;
 
 pub fn bytes_to_binary_string(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{:08b}", byte)).collect()}
@@ -122,3 +123,8 @@ pub fn key_as_u64() -> u64 {
 
 pub fn key_as_u32() -> u32 {
     key_as_u64() as u32}
+
+pub fn generate_salt(size: usize) -> Vec<u8> {
+    let mut salt = vec![0u8; size];
+    rand::thread_rng().fill_bytes(&mut salt);
+    salt}
