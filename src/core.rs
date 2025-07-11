@@ -1,16 +1,17 @@
-// src/qosmic.rs
-// TODO expose qosmic as C compatible func for internal/external func testing(no_mangle, extern C, cdylib)
-use crate::components::{
-    d_func_internal, h_func_internal, permute_1_internal, permute_2_internal, v_func_internal, w_func_internal,};
+// src/core.rs
+use crate::components::{d_func_internal, h_func_internal, permute_1_internal, permute_2_internal, v_func_internal, w_func_internal,};
 use crate::constants::*;
 use crate::primitives::{arx_internal, derive_internal, generate_sbox_internal};
-use crate::utils::{key_as_u128, key_as_u64};
+use crate::utils::{self, key_as_u128, key_as_u64};
 use hex;
 use log::{debug, info};
 use std::convert::TryInto;
 use std::time::Instant;
 
 pub type SBoxType = Vec<u16>;
+
+const ITERATIONS: u32 = 10_000;
+const SALT_SIZE: usize = 16;
 
 lazy_static! {
     pub static ref SBOX: SBoxType = {
@@ -65,31 +66,17 @@ fn final_byte_transform(combined_byte: u8, sbox_output_u16: u16, internal_seed: 
     *internal_seed &= MASK_128;
     transformed_val}
 
-pub fn qosmic512(
+pub fn qosmic_unkeyed(
     mut input_data_bytes: Vec<u8>,
     _fs_char: char,
     _s_box_param: &SBoxType,
     nonce: u64,
-    key: Option<&[u8]>,
 ) -> String {
     let total_hash_start_time = Instant::now();
     let split_len: usize = 64;
     let mut current_main_state: [u64; 8] = [0; 8];
     let mut internal_seed: u128 = key_as_u128() & MASK_128;
-    if let Some(key_bytes) = key {
-        debug!("Mixing in user-provided key of length {} bytes.", key_bytes.len());
-        let mut key_seed_mixer: u128 = 0;
-        for chunk in key_bytes.chunks(16) {
-            let mut temp_chunk: [u8; 16] = [0; 16];
-            temp_chunk[..chunk.len()].copy_from_slice(chunk);
-            let chunk_val = u128::from_be_bytes(temp_chunk);
-            key_seed_mixer = key_seed_mixer.wrapping_add(chunk_val);
-            key_seed_mixer ^= key_seed_mixer
-                .rotate_left(37)
-                .wrapping_mul(RATIO as u128)
-                .wrapping_add(MAGIC as u128);}
-        internal_seed ^= key_seed_mixer;}
-    debug!("qosmic_512 internal_seed (initial): {:x}", internal_seed);
+    debug!("qosmic_unkeyed internal_seed (initial): {:x}", internal_seed);
     debug!("Nonce for this run: {}", nonce);
     let _init_start_time = Instant::now();
     let transformed_nonce = nonce.wrapping_mul(MAGIC).rotate_left((nonce % 64) as u32).wrapping_add(RATIO);
@@ -155,7 +142,7 @@ pub fn qosmic512(
             .wrapping_add(arx_output_u64s[0] as u128)
             .wrapping_mul(current_main_state[0] as u128 | 1)
             .rotate_left((current_main_state[1] % 128) as u32)
-            .wrapping_add(key_as_u128() ^ (RATIO as u128))
+            .wrapping_add(key_as_u128() ^ (RATIO as u128)) // This key_as_u128() comes from QONST, not external key
             .wrapping_sub(current_main_state[7] as u128 ^ (MAGIC as u128).rotate_right(11));
         internal_seed &= MASK_128;
         let (x_m, y_m, z_m, w_m) = h_func(
@@ -216,7 +203,7 @@ pub fn qosmic512(
         temp_state_u64[3] ^ temp_state_u64[7],
         nonce.wrapping_add(CONST),
         &mut internal_seed,
-        nonce.wrapping_add(key_as_u64()).rotate_right(13),
+        nonce.wrapping_add(key_as_u64()).rotate_right(13), // This key_as_u64() comes from QONST, not external key
         &p_array,
         &temp_state_u64,);
     let mut final_compressed_bytes: Vec<u8> = Vec::with_capacity(64);
@@ -269,5 +256,57 @@ pub fn qosmic512(
     debug!("Estimated untimed overhead: {:?}", estimated_overhead);
     debug!("Finalization total took: {:?}", finalization_total_duration);
     let total_hash_duration = total_hash_start_time.elapsed();
-    info!("--- qosmic_512 hash time: {:?} ---", total_hash_duration);
+    info!("--- qosmic hash time: {:?} ---", total_hash_duration);
     hex_result}
+
+pub fn hmac_qosmic(key: &[u8], message: &[u8]) -> String {
+    let block_size = 64;
+    let s_box = get_sbox();
+    let mut k_prime = Vec::new();
+    if key.len() > block_size {
+        let nonce = crate::utils::derive_deterministic_nonce(key);
+        let hashed_key = qosmic_unkeyed(key.to_vec(), 's', s_box, nonce);
+        k_prime.extend_from_slice(&hex::decode(&hashed_key).expect("Failed to decode hashed key"));
+    } else {
+        k_prime.extend_from_slice(key);}
+    k_prime.resize(block_size, 0x00);
+    let mut k_inner_pad = Vec::with_capacity(block_size);
+    let mut k_outer_pad = Vec::with_capacity(block_size);
+    for i in 0..block_size {
+        k_inner_pad.push(k_prime[i] ^ 0x36);
+        k_outer_pad.push(k_prime[i] ^ 0x5C);}
+    let mut inner_message = k_inner_pad;
+    inner_message.extend_from_slice(message);
+    let inner_nonce = crate::utils::derive_deterministic_nonce(&inner_message);
+    let inner_hash_hex = qosmic_unkeyed(inner_message, 's', s_box, inner_nonce);
+    let inner_hash_bytes = hex::decode(&inner_hash_hex).expect("Failed to decode inner hash");
+    let mut outer_message = k_outer_pad;
+    outer_message.extend_from_slice(&inner_hash_bytes);
+    let outer_nonce = crate::utils::derive_deterministic_nonce(&outer_message);
+    let hmac_result_hex = qosmic_unkeyed(outer_message, 's', s_box, outer_nonce);
+    hmac_result_hex}
+
+pub fn pbkdf2_hmac_qosmic(password: &[u8], salt: &[u8], iterations: u32, output_len: usize) -> Vec<u8> {
+    let h_len = 64;
+    let num_blocks = (output_len + h_len - 1) / h_len;
+    let mut derived_key = Vec::with_capacity(output_len);
+    for i in 1..=num_blocks {
+        let mut salt_with_block_index = salt.to_vec();
+        salt_with_block_index.extend_from_slice(&(i as u32).to_be_bytes());
+        let mut u = hex::decode(hmac_qosmic(password, &salt_with_block_index))
+            .expect("HMAC hex decoding failed in PBKDF2");
+        let mut block = u.clone();
+        for iter_num in 1..iterations {
+            debug!("Iteration {}/{}", iter_num + 1, iterations);
+            u = hex::decode(hmac_qosmic(password, &u))
+                .expect("HMAC hex decoding failed in PBKDF2 loop");
+            for k in 0..h_len {
+                block[k] ^= u[k];}}
+        derived_key.extend_from_slice(&block);}
+    derived_key.truncate(output_len);
+    derived_key}
+
+pub fn hash_password(password: &[u8]) -> String {
+    let salt = utils::generate_salt(SALT_SIZE);
+    let derived_key = pbkdf2_hmac_qosmic(password, &salt, ITERATIONS, 64);
+    format!("{}${}", hex::encode(salt), hex::encode(derived_key))}
