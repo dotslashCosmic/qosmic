@@ -41,7 +41,7 @@ You can hash data by providing either a string or a file as input. Optional logg
 
 * `--password <password_input>`: Hash the provided password using the integrated Key Derivation Function (PBKDF2-HMAC-Qosmic). This mode generates a salt and performs multiple iterations for secure password storage.
 
-* `--interactive`: Run the application in interactive mode. In this mode, you can continuously input strings to be hashed. You can also set a persistent key by typing KEY <your_key_here>. Type EXIT or QUIT to end the session.
+* `--interactive`: Run the application in interactive mode. In this mode, you can continuously input strings to be hashed. You can also set a persistent key by typing `--key <your_key_here>`.
 
 * `-f <file_path>`: Hash the content of the specified file. (Only for non-interactive mode)
 
