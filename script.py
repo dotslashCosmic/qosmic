@@ -8,11 +8,11 @@ import numpy as np
 import hashlib
 import multiprocessing
 
-_qosmic_executable_path = "target/release/qosmic_512.exe" if sys.platform == "win32" else "target/release/qosmic_512"
+_qosmic_executable_path = "target/release/qosmic.exe" if sys.platform == "win32" else "target/release/qosmic"
 
 def _initialize_qosmic_process_for_worker(qosmic_executable_path: str):
     if not os.path.exists(qosmic_executable_path) and not any(os.path.exists(os.path.join(path, qosmic_executable_path)) for path in os.environ["PATH"].split(os.pathsep)):
-        print(f"Error: '{qosmic_executable_path}' for Qosmic512 not found. Please ensure it's compiled and in the same directory or in your system's PATH.", file=sys.stderr)
+        print(f"Error: '{qosmic_executable_path}' for Qosmic not found. Please ensure it's compiled and in the same directory or in your system's PATH.", file=sys.stderr)
         return None
     try:
         qosmic_process = subprocess.Popen(
@@ -24,7 +24,7 @@ def _initialize_qosmic_process_for_worker(qosmic_executable_path: str):
         time.sleep(0.1) 
         return qosmic_process
     except Exception as e:
-        print(f"Failed to start Qosmic512 interactive process in worker: {e}", file=sys.stderr)
+        print(f"Failed to start Qosmic interactive process in worker: {e}", file=sys.stderr)
         return None
 
 def terminate_worker(qosmic_process_instance):
@@ -35,10 +35,10 @@ def terminate_worker(qosmic_process_instance):
             qosmic_process_instance.stdin.close()
             qosmic_process_instance.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            print(f"Qosmic512 process in worker did not terminate gracefully, killing it.", file=sys.stderr)
+            print(f"Qosmic process in worker did not terminate gracefully, killing it.", file=sys.stderr)
             qosmic_process_instance.kill()
         except Exception as e:
-            print(f"Error terminating Qosmic512 process in worker: {e}", file=sys.stderr)
+            print(f"Error terminating Qosmic process in worker: {e}", file=sys.stderr)
 
 def hex_to_bin(hex_string: str) -> str:
     try:
@@ -54,9 +54,9 @@ def hamming_distance(s1: str, s2: str) -> int:
 
 def run_hash_algorithm(message: str, algorithm: str, qosmic_process_instance=None) -> str | None:
     message_bytes = message.encode('utf-8')
-    if algorithm == "qosmic512":
+    if algorithm == "qosmic":
         if qosmic_process_instance is None:
-            print("Error: Qosmic512 interactive process instance not provided.", file=sys.stderr)
+            print("Error: Qosmic interactive process instance not provided.", file=sys.stderr)
             return None
         try:
             qosmic_process_instance.stdin.write(message + "\n")
@@ -64,7 +64,7 @@ def run_hash_algorithm(message: str, algorithm: str, qosmic_process_instance=Non
             hash_output_hex = qosmic_process_instance.stdout.readline().strip()
             return hash_output_hex if hash_output_hex else None
         except Exception as e:
-            print(f"Error communicating with Qosmic512 process in worker: {e}", file=sys.stderr)
+            print(f"Error communicating with Qosmic process in worker: {e}", file=sys.stderr)
             return None
     elif algorithm == "blake2b":
         return hashlib.blake2b(message_bytes).hexdigest()
@@ -555,7 +555,7 @@ def hash_generation_worker(args):
     algorithm, base_message, start_index, end_index, qosmic_executable_path = args
     worker_hash_data = [] 
     qosmic_proc_instance = None
-    if algorithm == "qosmic512":
+    if algorithm == "qosmic":
         qosmic_proc_instance = _initialize_qosmic_process_for_worker(qosmic_executable_path)
         if qosmic_proc_instance is None:
             return [] 
@@ -576,8 +576,8 @@ def hash_generation_worker(args):
     return worker_hash_data
 
 def simulate_hashing_and_test(base_message: str, num_iterations: int):
-    ALGORITHMS_TO_TEST = ["qosmic512", "blake2b", "sha3_512", "sha256", "sha512", "blake2s", "shake_256"]
-    print("Qosmic512 Hashing Tester and Standard Hash Algorithm Comparison")
+    ALGORITHMS_TO_TEST = ["qosmic", "blake2b", "sha3_512", "sha256", "sha512", "blake2s", "shake_256"]
+    print("Qosmic Hashing Tester and Standard Hash Algorithm Comparison")
     print(f"This script will test the following algorithms: {', '.join(ALGORITHMS_TO_TEST)}.")
     num_cores = multiprocessing.cpu_count()
     print(f"Detected {num_cores} CPU cores. Will use {num_cores} processes for hash generation.")
