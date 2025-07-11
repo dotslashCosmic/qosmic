@@ -86,29 +86,51 @@ You can hash data by providing either a string or a file as input. Optional logg
 
 `cargo run --release -- --password "mySecurePassword123!"`
 
+## **Cryptographic Test Results:**
 
-**Performance Snapshot:**
-Hashes per second: 143,657.53 hashes/sec (based on 1,000,000 iterations on 16 CPU cores)
+* Total successful/attempts: 1000000/1000000
 
-Avalanche Effect: Average Bit Difference of exactly 50.00%, matching the ideal for cryptographic hashes.
+* Elapsed time: 7.69 seconds
 
-Simple Collision Check: No collisions found among 1,000,000 generated hashes.
+* Hashes per second: 130080.20 hashes/sec
 
-Monobit Test (Frequency Test): X2 = 0.03 (well within NIST Pass criteria).
+* Total bits collected for statistical tests: 512000000 (Each hash is 512 bits)
 
-Runs Test: Z-score = 0.35 (comfortably within NIST Pass criteria).
+**Avalanche Effect Test**:
 
-Longest Run of Ones: 27
+* *EXCELLENT* (100%) (Avg Bit Diff: 50.00%, Ideal: 50.00%, N=999999 comparisons)
 
-Longest Run of Zeros: 25
+**Simple Collision Check Test** (from generated attempts):
 
-Poker Test: X2 = 11.34 (within NIST Pass criteria).
+* *EXCELLENT* (100%) (No collisions found among generated hashes. Ideal: No Collisions.)
 
-Serial Test (Overlapping Bit Patterns):(m=3, Delta_m): X2 = 0.46(m=3, Delta_m-2): X2 = 0.15
+**Monobit Test** (Frequency Test):
 
-Block Frequency Test: X2 = 8001155.25 (within NIST Pass criteria).
+* *EXCELLENT* (100%) (X^2 = 0.00, NIST Pass: X^2 < 6.635, df=1)
 
-Cumulative Sums Test: Z-score = -0.27 (within NIST Pass criteria).
+**Runs Test**:
+
+* *EXCELLENT* (99%) (Total Runs: 256002950, Z-score: 0.26, NIST Pass: Z-score in [-2.576, 2.576], N=512000000)
+
+**Longest Run of Ones Test**:
+
+* *GOOD* (98%) (Longest 1s (overall): 28, Longest 0s (overall): 29, NIST Pass Range: [16 - 52], Total Bits N=512000000)
+
+**Poker Test**:
+
+* *GOOD* (99%) (m=4, X^2 = 5.03, NIST Pass: X^2 < 30.578, df=15, N=512000000)
+
+**Serial Test** (Overlapping Bit Patterns):
+
+* *GOOD* (99%) (Component tests: (m=3, Delta_m): X^2 = 1.57, NIST Pass: X^2 < 18.475, df=7; (m=3, Delta_m-2): X^2 = 0.07, NIST Pass: X^2 < 11.345, df=3)
+
+**Block Frequency Test**:
+
+* *GOOD* (95%) (M=64, X^2 = 7999940.88, NIST Pass: X^2 < 8009306.940, df=8000000, N=512000000)
+
+**Cumulative Sums Test**:
+
+* *EXCELLENT* (99%) (Max Excursion: 21175.00, Z-score: 0.25, NIST Pass: Z-score in [-2.576, 2.576], N=512000000)
 
 ## License
 
