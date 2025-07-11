@@ -19,9 +19,9 @@
 * **Performance Note**: Currently slightly slower (~2x) than typical hashing algorithms at ~4 cycles/bit, vs ~1.5 cycles/bit for SHA3_512
 
 * **Hashes for qosmic.exe v0.4.0**:
-* qosmic hash: `5c68cfecfdb76b35590e7244e7b49c484f2abba43290bc1765e30f61337c96ce87ecf64e4b2401be5a2725eb1e2e72bb71c659e5d92871f00ce0f9910b0a209c`
-* sha3_512 hash: `e26de0a4f38441868482c89b3b40224a43d4de0b0c154a682eb104cafb317a02856ddfdfb96abcb448cec2fb1b36240ff0df5dc6ea7a5baf9ea3bee94a47035c`
-* sha_256 hash: `9cd5e8b6cbf8302ca3071954bb484f6614cb7db8db3384695c266c2ea1389125`
+* qosmic hash: `b265d7795b82160e85996614d419393360c57d938391839f69c9195d3b2c7b43d456db1e22a04b953afe2cfe826594acdda311dbf8d455780aa6c4deb53f6f63`
+* sha3_512 hash: `c48dea6bcacbcb5a9b5b9786d8a248af5433d74c50d9d225bed21ed069c54b16e5db8c4935c844a61345b7ba333887bea20bd65ce55d9a5515634adbb6f5aca4`
+* sha_256 hash: `77fc6caa5fbd7a32ba858dd9279640fe2a3d58b81a3887b28cb6480ee974fac5`
 
 ## Installation
 
