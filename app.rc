@@ -1,8 +1,8 @@
 // app.rc
-#define VER_FILE_VERSION 0,4,0,0
-#define VER_PRODUCT_VERSION 0,4,0,0
-#define VER_FILE_VERSION_STR "0.4.0\0"
-#define VER_PRODUCT_VERSION_STR "0.4.0\0"
+#define VER_FILE_VERSION 0,4,1,0
+#define VER_PRODUCT_VERSION 0,4,1,0
+#define VER_FILE_VERSION_STR "0.4.1\0"
+#define VER_PRODUCT_VERSION_STR "0.4.1\0"
 
 1 ICON "app.ico"
 
