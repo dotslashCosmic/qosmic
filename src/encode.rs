@@ -1,7 +1,5 @@
 // src/encode.rs
 use hex;
-use num_bigint::BigUint;
-use num_traits::Num;
 use base64::{engine::general_purpose, Engine as _};
 use bs58;
 use base36;
