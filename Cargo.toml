@@ -1,6 +1,6 @@
 [package]
 name = "qosmic"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 authors = ["dotslashCosmic"]
 description = "Qosmic Cryptographic Toolkit"
@@ -8,18 +8,24 @@ copyright = "GNU GPLv3, 2025"
 
 [dependencies]
 hex = "0.4"
-rand = "0.8"
-ndarray = "0.15"
+rand = "0.9.1"
+ndarray = "0.16.1"
 num-bigint = "0.4"
 num-traits = "0.2"
 base36 = "0.0.1"
-base64 = "0.21.0"
+base64 = "0.22.1"
 bs58 = "0.5.0"
 lazy_static = "1.4.0"
 log = "0.4"
-env_logger = "0.10"
+env_logger = "0.11.8"
 clap = { version = "4.5.4", features = ["derive"] }
+libc = "0.2"
 
 [build-dependencies]
 winres = "0.1"
-toml = "0.8.23"
+toml = "0.9.2"
+
+[lib]
+name = "qosmic_lib"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
