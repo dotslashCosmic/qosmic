@@ -1,6 +1,6 @@
 // src/main.rs
-use qosmic::{encode, get_sbox, hash_password, hmac_qosmic, qosmic_unkeyed};
-use qosmic::utils::derive_deterministic_nonce;
+use qosmic_lib::{encode, get_sbox, hash_password, hmac_qosmic, qosmic_unkeyed};
+use qosmic_lib::utils::derive_deterministic_nonce;
 use std::io::BufRead;
 use log::{LevelFilter, debug, info, error};
 use env_logger::{Builder, Target};
