@@ -18,10 +18,14 @@
 
 * **Performance Note**: Currently slightly slower (~2x) than typical hashing algorithms at ~4 cycles/bit, vs ~1.5 cycles/bit for SHA3_512
 
-* **Hashes for qosmic.exe v0.4.0**:
-* qosmic hash: `b265d7795b82160e85996614d419393360c57d938391839f69c9195d3b2c7b43d456db1e22a04b953afe2cfe826594acdda311dbf8d455780aa6c4deb53f6f63`
-* sha3_512 hash: `c48dea6bcacbcb5a9b5b9786d8a248af5433d74c50d9d225bed21ed069c54b16e5db8c4935c844a61345b7ba333887bea20bd65ce55d9a5515634adbb6f5aca4`
-* sha_256 hash: `77fc6caa5fbd7a32ba858dd9279640fe2a3d58b81a3887b28cb6480ee974fac5`
+* **Hashes for qosmic.exe v0.4.1**:
+* qosmic hash: `4b9ff9ae5656f0483ea584e1b210ab0462b74143a81a466c6ce099de0d9bbe29181a078bb231df096f2fd7b76d91490a4aa2a833b6909a608650d263abfa189c`
+* sha3_512 hash: `c60e5bd2fbaa7beac3ae14d2a894463683de9382f9832abb87f5036fe5976e059b2780399681ae27f32678f37e8c432f530793b4343d476eb3b821e97d7fa7a6`
+* sha_256 hash: `sha256:43e723de88585f94c4ef0cd01aaadba7f7bc20cc244b664146703d01d2f19fda`
+
+* **Qosmic hashes for qosmic_lib v0.4.1**:
+* qosmic_lib.dll: `320c39cffb5ddc615287fba2643a53d9918edf3c0a4e18c2aee59fe88bae71a5fd5e8ca652ae02ff136ecdc930ee2dba9c200cee6890b7b3c1ebfc671c1946b0`
+* qosmic_lib.dll.lib: `1d233db8de566391614c38fa6fd8fd122779c8b2b3325edb934a43813a4f4598473f86c5451c105a82952e95308eb5c526ece82e1e60f1b1034a8e9994b42d85`
 
 ## Installation
 
